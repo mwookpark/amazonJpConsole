@@ -23,7 +23,6 @@ const FIRST_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-child
 const SECOND_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2) > div:nth-child(1) > div:nth-child(1) > a:nth-child(1)';
 const APP_GAME_WAIT = '.parental-dashboard-content > div:nth-child(2) > div:nth-child(2)';
 
-const LIMIT_MINUTE = 120;
 const NAME_TOMO = 'とも';
 const NAME_YUKI = 'ゆき';
 
@@ -36,6 +35,7 @@ var strLineMinGroupId = '';
 var isNeedSend = false;
 var iPreviousUsageYuki = 0;
 var iPreviousUsageTomo = 0;
+var iLimitMinute = 180;
 
 function init(){
     if(process.env.USER_MAIL != null && process.env.PASSWORD != null){
@@ -45,6 +45,7 @@ function init(){
         strLineAccessToken = process.env.LINE_ACCESS_TOKEN;
         strLineMinGroupId = process.env.LINE_MIN_GROUP_ID;
         iPauseTime = parseInt(process.env.PAUSE_TIME);
+        iLimitMinute = parseInt(process.env.LIMIT_MINUTE);
         setPreUsageMinute();
 
         return;
@@ -60,6 +61,8 @@ function init(){
     dynamodb.getItem(params, function (err, res) {
         strUserMail = res.Item.id.S;
         strPassword = res.Item.password.S;
+
+        console.log('dynamoDB:' + strUserMail);
 
         var params = {
             TableName: 'users',
@@ -199,20 +202,20 @@ function printUseTimes(pName, pSource){
     var isAdded = false;
 
     if(pName == NAME_TOMO){
-        if(iTotalMin > iPreviousUsageTomo){
+        if(iTotalMin > iPreviousUsageTomo + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
     }
 
     if(pName == NAME_YUKI){
-        if(iTotalMin > iPreviousUsageYuki){
+        if(iTotalMin > iPreviousUsageYuki + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
     }
 
-    if(isAdded && iTotalMin > LIMIT_MINUTE){
+    if(isAdded && iTotalMin > iLimitMinute){
         isNeedSend = true;
     }
 }
@@ -264,8 +267,11 @@ function setPreUsageMinute(pName){
                 iPreviousUsageYuki = res.Items[1].usage_minute.N;
                 console.log("tomo previous minute:" + iPreviousUsageTomo);
                 console.log("yuki previous minute:" + iPreviousUsageYuki);
-                execWebdriver();
+            }else{
+                console.log("no previous minute:");
             }
+
+            execWebdriver();
         }
     });
 }

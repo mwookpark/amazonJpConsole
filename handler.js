@@ -25,8 +25,9 @@ const APP_GAME_WAIT = '.parental-dashboard-content > div:nth-child(2) > div:nth-
 
 const NAME_TOMO = 'とも';
 const NAME_YUKI = 'ゆき';
+const PAUSE_TIME = 4000;
 
-var iPauseTime = 4000;
+var iPauseTime = PAUSE_TIME;
 var strMessageForSend = '';
 var strUserMail = '';
 var strPassword = '';
@@ -106,8 +107,8 @@ function execWebdriver(){
         .setValue('input[name="email"]', strUserMail)
         .setValue('input[name="password"]', strPassword)
         .click('input[id="signInSubmit"]')
-        //.waitForExist(AFTER_LOGIN_WAIT, PAUSE_TIME)
-        .pause(iPauseTime)
+        .waitForExist(AFTER_LOGIN_WAIT, PAUSE_TIME)
+        //.pause(iPauseTime)
         .click(CONSOLE_MENU_OPEN)
         .pause(iPauseTime + 1500)
     //    .waitForExist(CONSOLE_DETAIL_WAIT)

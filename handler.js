@@ -1,17 +1,17 @@
 'use strict';
 
-const phantomjs = require('phantomjs-prebuilt');
-const webdriverio = require('webdriverio');
-var wdOpts = { desiredCapabilities: { browserName: 'phantomjs',
+const PHANTOMJS = require('phantomjs-prebuilt');
+const WEBDRIVERIO = require('webdriverio');
+const WDOPTS = { desiredCapabilities: { browserName: 'phantomjs',
                                       'phantomjs.page.settings.userAgent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:57.0) Gecko/20100101 Firefox/57.0 WebKit',
                                       javascriptEnabled: true
                                     }
 };
 
-var https = require('https');
+const HTTPS = require('https');
 
-var AWS = require('aws-sdk');
-var dynamodb = new AWS.DynamoDB({region: 'ap-northeast-1'});
+const AWS = require('aws-sdk');
+const DYNAMODB = new AWS.DynamoDB({region: 'ap-northeast-1'});
 
 const DOMParser = require('dom-parser');
 
@@ -38,8 +38,14 @@ var iPreviousUsageYuki = 0;
 var iPreviousUsageTomo = 0;
 var iLimitMinute = 180;
 
+/**
+* set enviroment value
+*
+**/
 function init(){
-    if(process.env.USER_MAIL != null && process.env.PASSWORD != null){
+    if(process.env.USER_MAIL == null){
+        setIntValueFromDB();
+    }else{
         console.log('use env:' + process.env.USER_MAIL);
         strUserMail = process.env.USER_MAIL;
         strPassword = process.env.PASSWORD;
@@ -47,11 +53,13 @@ function init(){
         strLineMinGroupId = process.env.LINE_MIN_GROUP_ID;
         iPauseTime = parseInt(process.env.PAUSE_TIME);
         iLimitMinute = parseInt(process.env.LIMIT_MINUTE);
+
         setPreUsageMinute();
-
-        return;
     }
+}
 
+
+function setIntValueFromDB(){
     var params = {
         TableName: 'users',
         Key: {
@@ -59,7 +67,7 @@ function init(){
         }
     };
 
-    dynamodb.getItem(params, function (err, res) {
+    DYNAMODB.getItem(params, function (err, res) {
         strUserMail = res.Item.id.S;
         strPassword = res.Item.password.S;
 
@@ -72,7 +80,7 @@ function init(){
             }
         };
 
-        dynamodb.getItem(params, function (err, res) {
+        DYNAMODB.getItem(params, function (err, res) {
             strLineAccessToken = 'Bearer ' + res.Item.id.S;
 
             params = {
@@ -82,14 +90,15 @@ function init(){
                 }
             };
 
-            dynamodb.getItem(params, function (err, res) {
+            DYNAMODB.getItem(params, function (err, res) {
                 strLineMinGroupId = res.Item.id.S;
 
                 //set env value
-                process.env['USER_MAIL'] = strUserMail;
-                process.env['PASSWORD'] = strPassword;
-                process.env['LINE_ACCESS_TOKEN'] = strLineAccessToken;
-                process.env['LINE_MIN_GROUP_ID'] = strLineMinGroupId;
+                process.env.USER_MAIL = strUserMail;
+                process.env.PASSWORD = strPassword;
+                process.env.LINE_ACCESS_TOKEN = strLineAccessToken;
+                process.env.LINE_MIN_GROUP_ID = strLineMinGroupId;
+                console.log("env:" + process.env.LINE_MIN_GROUP_ID);
 
                 setPreUsageMinute();
             });
@@ -98,10 +107,14 @@ function init(){
 }
 
 
+/**
+* amazon scraping
+*
+**/
 function execWebdriver(){
     console.log('start phantomjs:' + strUserMail);
-    phantomjs.run('--webdriver=4444').then(program => {
-        var client = webdriverio.remote(wdOpts);
+    PHANTOMJS.run('--webdriver=4444').then(program => {
+        var client = WEBDRIVERIO.remote(WDOPTS);
         client.init()
         .url(AMAZON_URL)
         .setValue('input[name="email"]', strUserMail)
@@ -148,8 +161,8 @@ function execWebdriver(){
 /**
 * 端末の使用時間を表示
 *
-* @param string pName
-* @param string pSource
+* @param {string} pName
+* @param {string} pSource
 **/
 function printUseTimes(pName, pSource){
     var parser = new DOMParser();
@@ -239,7 +252,7 @@ function updateUsageTime(pName, pTotalMin){
         }
     };
 
-    dynamodb.putItem(params, function (err, res) {
+    DYNAMODB.putItem(params, function (err, res) {
         if (err) {
             console.log(err, err.stack);
         }
@@ -248,6 +261,8 @@ function updateUsageTime(pName, pTotalMin){
 
 
 function setPreUsageMinute(pName){
+    console.log("datetime:" + getNowDateTime());
+
     var params = {
         TableName: 'daliy_usage_minute',
         KeyConditionExpression: "#hash = :str",
@@ -259,7 +274,7 @@ function setPreUsageMinute(pName){
         }
     };
 
-    dynamodb.query(params, function (err, res) {
+    DYNAMODB.query(params, function (err, res) {
         if (err) {
             console.log(err, err.stack);
         } else {
@@ -299,7 +314,7 @@ function sendToLine(pMessage){
         messages: [{type: "text", text: pMessage}]
     });
 
-    var req = https.request(opts, function(res) {
+    var req = HTTPS.request(opts, function(res) {
         res.on('data', function(res) {
             //console.log("RESPONSE:" + res.toString());
         }).on('error', function(e) {

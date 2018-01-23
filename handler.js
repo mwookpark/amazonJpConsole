@@ -4,6 +4,7 @@ const PHANTOMJS = require('phantomjs-prebuilt');
 const WEBDRIVERIO = require('webdriverio');
 const WDOPTS = { desiredCapabilities: { browserName: 'phantomjs',
                                       'phantomjs.page.settings.userAgent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:57.0) Gecko/20100101 Firefox/57.0 WebKit',
+                                        platform: 'MAC',
                                       javascriptEnabled: true
                                     }
 };
@@ -25,7 +26,7 @@ const APP_GAME_WAIT = '.parental-dashboard-content > div:nth-child(2) > div:nth-
 
 const NAME_TOMO = 'とも';
 const NAME_YUKI = 'ゆき';
-const PAUSE_TIME = 4000;
+const PAUSE_TIME = 5000;
 
 var iPauseTime = PAUSE_TIME;
 var strMessageForSend = '';
@@ -121,7 +122,6 @@ function execWebdriver(){
         .setValue('input[name="password"]', strPassword)
         .click('input[id="signInSubmit"]')
         .waitForExist(AFTER_LOGIN_WAIT, PAUSE_TIME)
-        //.pause(iPauseTime)
         .click(CONSOLE_MENU_OPEN)
         .pause(iPauseTime + 1500)
     //    .waitForExist(CONSOLE_DETAIL_WAIT)
@@ -136,11 +136,17 @@ function execWebdriver(){
             printUseTimes(NAME_YUKI, source);
         })
         .end().then(function(){
+            //ここでcookieを消すと
+            //A session id is required for this command but wasn't found in the response payload
+            //になる。
+            //
+            //@see https://github.com/webdriverio/webdriverio/issues/968
+            //if you call end you can't execute more commands because your session and browser got closed.
             console.log('isNeedLineSend:' + isNeedSend);
             if(isNeedSend){
                 sendToLine(strMessageForSend);
             }
-            program.kill(); // quits PhantomJS
+            //program.kill(); // quits PhantomJS
         })
         .catch((err) => {
             console.error('client error: ' + err);
@@ -216,14 +222,14 @@ function printUseTimes(pName, pSource){
     var isAdded = false;
 
     if(pName == NAME_TOMO){
-        if(iTotalMin > iPreviousUsageTomo + 60){
+        if(iPreviousUsageTomo == 0 || iTotalMin > iPreviousUsageTomo + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
     }
 
     if(pName == NAME_YUKI){
-        if(iTotalMin > iPreviousUsageYuki + 60){
+        if(iPreviousUsageYuki == 0 || iTotalMin > iPreviousUsageYuki + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
@@ -284,7 +290,7 @@ function setPreUsageMinute(pName){
                 console.log("tomo previous minute:" + iPreviousUsageTomo);
                 console.log("yuki previous minute:" + iPreviousUsageYuki);
             }else{
-                console.log("no previous minute:");
+                console.log("no previous minute");
             }
 
             execWebdriver();

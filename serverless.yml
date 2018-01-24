@@ -66,6 +66,11 @@ functions:
 #      - iot:
 #          sql: "SELECT * FROM 'some_topic'"
 #    Define function environment variables here
-#    environment:
-#      variable2: value2
+    environment:
+      USER_MAIL: ''
+      PASSWORD: ''
+      LINE_ACCESS_TOKEN: ''
+      LINE_MIN_GROUP_ID: ''
+      PAUSE_TIME: 4000
+      LIMIT_MINUTE: 180
 

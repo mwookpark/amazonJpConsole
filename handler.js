@@ -146,7 +146,7 @@ function execWebdriver(){
             if(isNeedSend){
                 sendToLine(strMessageForSend);
             }
-            //program.kill(); // quits PhantomJS
+            program.kill(); // quits PhantomJS
         })
         .catch((err) => {
             console.error('client error: ' + err);
@@ -265,7 +265,11 @@ function updateUsageTime(pName, pTotalMin){
     });
 }
 
-
+/**
+*
+*
+* @param string pName
+**/
 function setPreUsageMinute(pName){
     console.log("datetime:" + getNowDateTime());
 
@@ -285,8 +289,8 @@ function setPreUsageMinute(pName){
             console.log(err, err.stack);
         } else {
             if(res.Items.length > 1){
-                iPreviousUsageTomo = res.Items[0].usage_minute.N;
-                iPreviousUsageYuki = res.Items[1].usage_minute.N;
+                iPreviousUsageTomo = parseInt(res.Items[0].usage_minute.N);
+                iPreviousUsageYuki = parseInt(res.Items[1].usage_minute.N);
                 console.log("tomo previous minute:" + iPreviousUsageTomo);
                 console.log("yuki previous minute:" + iPreviousUsageYuki);
             }else{

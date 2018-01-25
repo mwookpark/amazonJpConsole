@@ -295,6 +295,7 @@ function setPreUsageMinute(pName){
                 console.log("yuki previous minute:" + iPreviousUsageYuki);
             }else{
                 console.log("no previous minute");
+                console.log("yesterday is:" + getYesterDate());
             }
 
             execWebdriver();
@@ -342,6 +343,12 @@ function sendToLine(pMessage){
 function getNowDate(){
     var date = new Date();
     return date.getFullYear() + '' +  getZeroPadding(date.getMonth() + 1) + getZeroPadding(date.getDate());
+}
+
+function getYesterDate(){
+    var yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.getFullYear() + '' +  getZeroPadding(yesterday.getMonth() + 1) + getZeroPadding(yesterday.getDate());
 }
 
 function getNowDateTime(){

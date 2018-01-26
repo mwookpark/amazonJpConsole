@@ -44,7 +44,7 @@ var iLimitMinute = 180;
 *
 **/
 function init(){
-    if(process.env.USER_MAIL == null){
+    if(process.env.USER_MAIL == '' || process.env.USER_MAIL == null){
         setIntValueFromDB();
     }else{
         console.log('use env:' + process.env.USER_MAIL);
@@ -55,7 +55,7 @@ function init(){
         iPauseTime = parseInt(process.env.PAUSE_TIME);
         iLimitMinute = parseInt(process.env.LIMIT_MINUTE);
 
-        setPreUsageMinute();
+        setDBfromUsageMinute(getNowDate(), execWebdriver);
     }
 }
 
@@ -101,7 +101,7 @@ function setIntValueFromDB(){
                 process.env.LINE_MIN_GROUP_ID = strLineMinGroupId;
                 console.log("env:" + process.env.LINE_MIN_GROUP_ID);
 
-                setPreUsageMinute();
+                setDBfromUsageMinute(getNowDate(), execWebdriver);
             });
         });
     });
@@ -117,6 +117,7 @@ function execWebdriver(){
     PHANTOMJS.run('--webdriver=4444').then(program => {
         var client = WEBDRIVERIO.remote(WDOPTS);
         client.init()
+        .deleteCookie()
         .url(AMAZON_URL)
         .setValue('input[name="email"]', strUserMail)
         .setValue('input[name="password"]', strPassword)
@@ -269,10 +270,8 @@ function updateUsageTime(pName, pTotalMin){
 *
 *
 * @param string pName
-**/
-function setPreUsageMinute(pName){
-    console.log("datetime:" + getNowDateTime());
-
+*/
+function setDBfromUsageMinute(pSearchDate, pCallBack){
     var params = {
         TableName: 'daliy_usage_minute',
         KeyConditionExpression: "#hash = :str",
@@ -280,7 +279,7 @@ function setPreUsageMinute(pName){
             "#hash": "use_date"
         },
         ExpressionAttributeValues: {
-            ":str": {"S" : getNowDate()}
+            ":str": {"S" : pSearchDate}
         }
     };
 
@@ -289,16 +288,32 @@ function setPreUsageMinute(pName){
             console.log(err, err.stack);
         } else {
             if(res.Items.length > 1){
-                iPreviousUsageTomo = parseInt(res.Items[0].usage_minute.N);
-                iPreviousUsageYuki = parseInt(res.Items[1].usage_minute.N);
-                console.log("tomo previous minute:" + iPreviousUsageTomo);
-                console.log("yuki previous minute:" + iPreviousUsageYuki);
+                switch (pSearchDate){
+                    case getNowDate():
+                        iPreviousUsageTomo = parseInt(res.Items[0].usage_minute.N);
+                        iPreviousUsageYuki = parseInt(res.Items[1].usage_minute.N);
+                        console.log("tomo previous minute:" + iPreviousUsageTomo);
+                        console.log("yuki previous minute:" + iPreviousUsageYuki);
+                        break;
+                    case getYesterDate():
+                        var yesterDayUsageMessage = "先日の利用時間\n" 
+                                + NAME_TOMO + ":" + res.Items[0].usage_minute.N + "分"
+                                + NAME_YUKI + ":" + res.Items[1].usage_minute.N + "分";
+                        sendToLine(yesterDayUsageMessage);
+                        break;
+                    default:
+                        console.log('not match date');
+                        break;
+                }
             }else{
                 console.log("no previous minute");
                 console.log("yesterday is:" + getYesterDate());
+                setDBfromUsageMinute(getYesterDate());
             }
 
-            execWebdriver();
+            if(pCallBack != null){
+                pCallBack();
+            }
         }
     });
 }

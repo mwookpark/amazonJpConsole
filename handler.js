@@ -7,7 +7,7 @@ const WDOPTS = { desiredCapabilities: { browserName: 'phantomjs',
                                         platform: 'MAC',
                                       javascriptEnabled: true
                                     }
-};
+                };
 
 const HTTPS = require('https');
 
@@ -22,6 +22,7 @@ const CONSOLE_MENU_OPEN = '.nav-tabs > li:nth-child(2) > div:nth-child(1) > div:
 const CONSOLE_DETAIL_WAIT = 'div.ng-isolate-scope:nth-child(4)';
 const FIRST_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-child(1) > li:nth-child(1)';
 const SECOND_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-child(1) > li:nth-child(2) > div:nth-child(1) > div:nth-child(1) > a:nth-child(1)';
+const APP_GAME_EVENT = '.parental-dashboard-content > div:nth-child(2) > a:nth-child(1)';
 const APP_GAME_WAIT = '.parental-dashboard-content > div:nth-child(2) > div:nth-child(2)';
 
 const NAME_TOMO = 'とも';
@@ -40,9 +41,9 @@ var iPreviousUsageTomo = 0;
 var iLimitMinute = 180;
 
 /**
-* set enviroment value
-*
-**/
+ * set enviroment value
+ *
+ */
 function init(){
     if(process.env.USER_MAIL == '' || process.env.USER_MAIL == null){
         setIntValueFromDB();
@@ -125,13 +126,14 @@ function execWebdriver(){
         .waitForExist(AFTER_LOGIN_WAIT, PAUSE_TIME)
         .click(CONSOLE_MENU_OPEN)
         .pause(iPauseTime + 1500)
-    //    .waitForExist(CONSOLE_DETAIL_WAIT)
+        .click(APP_GAME_EVENT)
         .getSource().then(source => {
             console.log('getSource' + NAME_TOMO);
             printUseTimes(NAME_TOMO, source);
         })
         .click(SECOND_CONSOLE_EVENT)
         .pause(iPauseTime)
+        .click(APP_GAME_EVENT)
         .getSource().then(source => {
             console.log('getSource' + NAME_YUKI);
             printUseTimes(NAME_YUKI, source);
@@ -197,26 +199,7 @@ function printUseTimes(pName, pSource){
         }
     }
 
-    iHour = parseInt(iTotalMin / 60);
-
-    if(iHour > 0){
-        iMin = iTotalMin % 60;
-    }else{
-        iMin = iTotalMin;
-    }
-
-    var strHour = '';
-    var strMin = '';
-
-    if(iHour > 0){
-        strHour = String(iHour) + '時間';
-    }
-
-     if(iMin > 0){
-        strMin = String(iMin) + '分';
-    }
-
-    var strMessage = pName + ':' + strHour + strMin + "\n";
+    var strMessage = pName + ':' + getUsageTimeMessage(iTotalMin) + "\n";
     console.log(strMessage);
     strMessageForSend += strMessage;
 
@@ -239,7 +222,48 @@ function printUseTimes(pName, pSource){
     if(isAdded && iTotalMin > iLimitMinute){
         isNeedSend = true;
     }
+
+    //analize second tab
+    var eleNames = dom.getElementsByClassName('activityTitle');
+    var eleValues = dom.getElementsByClassName('activityDuration ng-binding');
+
+    for(var nameNo in eleNames){
+        var eleName = eleNames[nameNo].textContent;
+        var eleValue = eleValues[nameNo].textContent;
+        console.log(eleName + ':' + eleValue);
+    }
+
 }
+
+
+function getUsageTimeMessage(pTotalMin){
+    var iHour = 0;
+    var iMin = 0;
+    var strHour = '';
+    var strMin = '';
+
+    iHour = parseInt(pTotalMin / 60);
+
+    if(iHour > 0){
+        iMin = pTotalMin % 60;
+    }else{
+        iMin = pTotalMin;
+    }
+
+    var strHour = '';
+    var strMin = '';
+
+    if(iHour > 0){
+        strHour = String(iHour) + '時間';
+    }
+
+     if(iMin > 0){
+        strMin = String(iMin) + '分';
+    }
+
+    return strHour + strMin;
+}
+
 
 
 function updateUsageTime(pName, pTotalMin){
@@ -267,9 +291,10 @@ function updateUsageTime(pName, pTotalMin){
 }
 
 /**
+* DynamoDBから指定した日付の時間を取得
 *
-*
-* @param string pName
+* @param {string} pName
+* @param {string} pCallBack
 */
 function setDBfromUsageMinute(pSearchDate, pCallBack){
     var params = {
@@ -297,9 +322,10 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
                         break;
                     case getYesterDate():
                         var yesterDayUsageMessage = "先日の利用時間\n" 
-                                + NAME_TOMO + ":" + res.Items[0].usage_minute.N + "分"
-                                + NAME_YUKI + ":" + res.Items[1].usage_minute.N + "分";
+                                + NAME_TOMO + ":" + getUsageTimeMessage(parseInt(res.Items[0].usage_minute.N)) + "\n"
+                                + NAME_YUKI + ":" + getUsageTimeMessage(parseInt(res.Items[1].usage_minute.N));
                         sendToLine(yesterDayUsageMessage);
+                        return;
                         break;
                     default:
                         console.log('not match date');
@@ -308,7 +334,8 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
             }else{
                 console.log("no previous minute");
                 console.log("yesterday is:" + getYesterDate());
-                setDBfromUsageMinute(getYesterDate());
+                setDBfromUsageMinute(getYesterDate(), null);
+                return;
             }
 
             if(pCallBack != null){
@@ -322,8 +349,8 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
 /**
 * メッセージをLINEに送信
 *
-* @param string pMessage
-**/
+* @param {string} pMessage
+*/
 function sendToLine(pMessage){
     var opts = {
         hostname: 'api.line.me',
@@ -354,18 +381,29 @@ function sendToLine(pMessage){
     });
 }
 
-//date is not defined
+/**
+* 現在日付をYYYYMMDDで表示
+*
+*/
 function getNowDate(){
     var date = new Date();
     return date.getFullYear() + '' +  getZeroPadding(date.getMonth() + 1) + getZeroPadding(date.getDate());
 }
 
+/**
+* 翌日日付をYYYYMMDDで表示
+*
+*/
 function getYesterDate(){
     var yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     return yesterday.getFullYear() + '' +  getZeroPadding(yesterday.getMonth() + 1) + getZeroPadding(yesterday.getDate());
 }
 
+/**
+* 現在の日時をYYYYMMDD HH:MM:SSで表示
+*
+*/
 function getNowDateTime(){
     var date = new Date();
     return getNowDate() + getZeroPadding(date.getHours()) + getZeroPadding(date.getMinutes()) + getZeroPadding(date.getSeconds());

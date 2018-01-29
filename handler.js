@@ -348,7 +348,6 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
                 console.log("no previous minute");
                 console.log("yesterday is:" + getYesterDate());
                 setDBfromUsageMinute(getYesterDate(), null);
-                return;
             }
 
             if(pCallBack != null){

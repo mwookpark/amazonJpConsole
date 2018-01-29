@@ -199,7 +199,21 @@ function printUseTimes(pName, pSource){
         }
     }
 
-    var strMessage = pName + ':' + getUsageTimeMessage(iTotalMin) + "\n";
+    var strSubMessage = '';
+
+    //analize second tab
+    var eleNames = dom.getElementsByClassName('activityTitle');
+    var eleValues = dom.getElementsByClassName('activityDuration ng-binding');
+
+    for(var nameNo in eleNames){
+        var eleName = eleNames[nameNo].textContent.trim();
+        var eleSplitNames = eleName.split(' ');
+
+        var eleValue = eleValues[nameNo].textContent;
+        strSubMessage += '  ' + eleSplitNames[0] + ':' + eleValue + "\n";
+    }
+
+    var strMessage = pName + ':' + getUsageTimeMessage(iTotalMin) + "\n" + strSubMessage;
     console.log(strMessage);
     strMessageForSend += strMessage;
 
@@ -222,20 +236,14 @@ function printUseTimes(pName, pSource){
     if(isAdded && iTotalMin > iLimitMinute){
         isNeedSend = true;
     }
-
-    //analize second tab
-    var eleNames = dom.getElementsByClassName('activityTitle');
-    var eleValues = dom.getElementsByClassName('activityDuration ng-binding');
-
-    for(var nameNo in eleNames){
-        var eleName = eleNames[nameNo].textContent;
-        var eleValue = eleValues[nameNo].textContent;
-        console.log(eleName + ':' + eleValue);
-    }
-
 }
 
 
+/**
+* 分を文字列の時分に変える
+*
+* @param {int} pTotalMin
+*/
 function getUsageTimeMessage(pTotalMin){
     var iHour = 0;
     var iMin = 0;
@@ -265,7 +273,12 @@ function getUsageTimeMessage(pTotalMin){
 }
 
 
-
+/**
+* 履歴テーブルを更新する
+*
+* @param {string} pName
+* @param {int} pTotalMin
+*/
 function updateUsageTime(pName, pTotalMin){
     //Number型でもstringにするべきらしい
     //message: 'Expected params.Item[\'usage_minute\'].N to be a string',

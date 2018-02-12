@@ -71,6 +71,9 @@ functions:
       PASSWORD: ''
       LINE_ACCESS_TOKEN: ''
       LINE_MIN_GROUP_ID: ''
-      PAUSE_TIME: 4000
+      PAUSE_TIME: 7000
       LIMIT_MINUTE: 180
       TZ: 'Asia/Tokyo'
+      FIRST_NAME: ''
+      SECOND_NAME: ''
+

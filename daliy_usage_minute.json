@@ -1,0 +1,31 @@
+{
+    "Table": {
+        "AttributeDefinitions": [
+            {
+                "AttributeName": "name", 
+                "AttributeType": "S"
+            }, 
+            {
+                "AttributeName": "use_date", 
+                "AttributeType": "S"
+            }
+        ], 
+        "ProvisionedThroughput": {
+            "NumberOfDecreasesToday": 1, 
+            "WriteCapacityUnits": 1, 
+            "ReadCapacityUnits": 1, 
+        }, 
+        "TableName": "daliy_usage_minute", 
+        "TableStatus": "ACTIVE", 
+        "KeySchema": [
+            {
+                "KeyType": "HASH", 
+                "AttributeName": "use_date"
+            }, 
+            {
+                "KeyType": "RANGE", 
+                "AttributeName": "name"
+            }
+        ], 
+    }
+}

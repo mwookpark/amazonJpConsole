@@ -1,0 +1,23 @@
+{
+    "Table": {
+        "AttributeDefinitions": [
+            {
+                "AttributeName": "domain", 
+                "AttributeType": "S"
+            }
+        ], 
+        "ProvisionedThroughput": {
+            "NumberOfDecreasesToday": 0, 
+            "WriteCapacityUnits": 1, 
+            "ReadCapacityUnits": 1
+        }, 
+        "TableName": "users", 
+        "TableStatus": "ACTIVE", 
+        "KeySchema": [
+            {
+                "KeyType": "HASH", 
+                "AttributeName": "domain"
+            }
+        ], 
+    }
+}

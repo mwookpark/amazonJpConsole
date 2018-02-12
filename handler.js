@@ -5,7 +5,7 @@ const WEBDRIVERIO = require('webdriverio');
 const WDOPTS = { desiredCapabilities: { browserName: 'phantomjs',
                                       'phantomjs.page.settings.userAgent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:57.0) Gecko/20100101 Firefox/57.0 WebKit',
                                         platform: 'MAC',
-                                      javascriptEnabled: true
+                                        javascriptEnabled: true
                                     }
                 };
 
@@ -25,8 +25,6 @@ const SECOND_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-chil
 const APP_GAME_EVENT = '.parental-dashboard-content > div:nth-child(2) > a:nth-child(1)';
 const APP_GAME_WAIT = '.parental-dashboard-content > div:nth-child(2) > div:nth-child(2)';
 
-const NAME_TOMO = 'とも';
-const NAME_YUKI = 'ゆき';
 const PAUSE_TIME = 5000;
 
 var iPauseTime = PAUSE_TIME;
@@ -36,9 +34,12 @@ var strPassword = '';
 var strLineAccessToken = '';
 var strLineMinGroupId = '';
 var isNeedSend = false;
-var iPreviousUsageYuki = 0;
-var iPreviousUsageTomo = 0;
+var iPreviousUsageSecond = 0;
+var iPreviousUsageFirst = 0;
 var iLimitMinute = 180;
+var strNameFirst = '妹';
+var strNameSecond = '兄';
+
 
 /**
  * set enviroment value
@@ -55,12 +56,17 @@ function init(){
         strLineMinGroupId = process.env.LINE_MIN_GROUP_ID;
         iPauseTime = parseInt(process.env.PAUSE_TIME);
         iLimitMinute = parseInt(process.env.LIMIT_MINUTE);
+        strNameFirst = process.env.FIRST_NAME;
+        strNameSecond = process.env.SECOND_NAME;
 
         setDBfromUsageMinute(getNowDate(), execWebdriver);
     }
 }
 
-
+/**
+* 初期データをDBから取得
+*
+*/
 function setIntValueFromDB(){
     var params = {
         TableName: 'users',
@@ -128,15 +134,15 @@ function execWebdriver(){
         .pause(iPauseTime + 1500)
         .click(APP_GAME_EVENT)
         .getSource().then(source => {
-            console.log('getSource' + NAME_TOMO);
-            printUseTimes(NAME_TOMO, source);
+            console.log('getSource' + strNameFirst);
+            printUseTimes(strNameFirst, source);
         })
         .click(SECOND_CONSOLE_EVENT)
         .pause(iPauseTime)
         .click(APP_GAME_EVENT)
         .getSource().then(source => {
-            console.log('getSource' + NAME_YUKI);
-            printUseTimes(NAME_YUKI, source);
+            console.log('getSource' + strNameSecond);
+            printUseTimes(strNameSecond, source);
         })
         .end().then(function(){
             //ここでcookieを消すと
@@ -210,24 +216,30 @@ function printUseTimes(pName, pSource){
         var eleSplitNames = eleName.split(' ');
 
         var eleValue = eleValues[nameNo].textContent;
+        eleValue = eleValue.replace('&lt;', '');
         strSubMessage += '  ' + eleSplitNames[0] + ':' + eleValue + "\n";
     }
 
     var strMessage = pName + ':' + getUsageTimeMessage(iTotalMin) + "\n" + strSubMessage;
     console.log(strMessage);
+
+    if(strMessageForSend.length > 0){
+        strMessageForSend += "\n";
+    }
+
     strMessageForSend += strMessage;
 
     var isAdded = false;
 
-    if(pName == NAME_TOMO){
-        if(iPreviousUsageTomo == 0 || iTotalMin > iPreviousUsageTomo + 60){
+    if(pName == strNameFirst){
+        if(iPreviousUsageFirst == 0 || iTotalMin > parseInt(iPreviousUsageFirst) + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
     }
 
-    if(pName == NAME_YUKI){
-        if(iPreviousUsageYuki == 0 || iTotalMin > iPreviousUsageYuki + 60){
+    if(pName == strNameSecond){
+        if(iPreviousUsageSecond == 0 || iTotalMin > parseInt(iPreviousUsageSecond) + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
@@ -328,15 +340,15 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
             if(res.Items.length > 1){
                 switch (pSearchDate){
                     case getNowDate():
-                        iPreviousUsageTomo = parseInt(res.Items[0].usage_minute.N);
-                        iPreviousUsageYuki = parseInt(res.Items[1].usage_minute.N);
-                        console.log("tomo previous minute:" + iPreviousUsageTomo);
-                        console.log("yuki previous minute:" + iPreviousUsageYuki);
+                        iPreviousUsageFirst = parseInt(res.Items[0].usage_minute.N);
+                        iPreviousUsageSecond = parseInt(res.Items[1].usage_minute.N);
+                        console.log("1st previous minute:" + iPreviousUsageFirst);
+                        console.log("2nd previous minute:" + iPreviousUsageSecond);
                         break;
                     case getYesterDate():
                         var yesterDayUsageMessage = "先日の利用時間\n" 
-                                + NAME_TOMO + ":" + getUsageTimeMessage(parseInt(res.Items[0].usage_minute.N)) + "\n"
-                                + NAME_YUKI + ":" + getUsageTimeMessage(parseInt(res.Items[1].usage_minute.N));
+                                + strNameFirst + ":" + getUsageTimeMessage(parseInt(res.Items[0].usage_minute.N)) + "\n"
+                                + strNameSecond + ":" + getUsageTimeMessage(parseInt(res.Items[1].usage_minute.N));
                         sendToLine(yesterDayUsageMessage);
                         return;
                         break;
@@ -347,7 +359,7 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
             }else{
                 console.log("no previous minute");
                 console.log("yesterday is:" + getYesterDate());
-                setDBfromUsageMinute(getYesterDate(), null);
+                setDBfromUsageMinute(getYesterDate());
             }
 
             if(pCallBack != null){
@@ -421,6 +433,11 @@ function getNowDateTime(){
     return getNowDate() + getZeroPadding(date.getHours()) + getZeroPadding(date.getMinutes()) + getZeroPadding(date.getSeconds());
 }
 
+/**
+* 日付用の0パーディング
+*
+* @param {string} pNumber
+*/
 function getZeroPadding(pNumber){
     return ('00' + (pNumber)).slice(-2);
 }

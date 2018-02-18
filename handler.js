@@ -25,7 +25,7 @@ const SECOND_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-chil
 const APP_GAME_EVENT = '.parental-dashboard-content > div:nth-child(2) > a:nth-child(1)';
 const APP_GAME_WAIT = '.parental-dashboard-content > div:nth-child(2) > div:nth-child(2)';
 
-const PAUSE_TIME = 5000;
+const PAUSE_TIME = 8000;
 
 var iPauseTime = PAUSE_TIME;
 var strMessageForSend = '';
@@ -232,14 +232,14 @@ function printUseTimes(pName, pSource){
     var isAdded = false;
 
     if(pName == strNameFirst){
-        if(iPreviousUsageFirst == 0 || iTotalMin > parseInt(iPreviousUsageFirst) + 60){
+        if(iPreviousUsageFirst == 0 || iTotalMin == 0 || iTotalMin > parseInt(iPreviousUsageFirst) + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }
     }
 
     if(pName == strNameSecond){
-        if(iPreviousUsageSecond == 0 || iTotalMin > parseInt(iPreviousUsageSecond) + 60){
+        if(iPreviousUsageSecond == 0 || iTotalMin == 0 || iTotalMin > parseInt(iPreviousUsageSecond) + 60){
             updateUsageTime(pName, iTotalMin);
             isAdded = true;
         }

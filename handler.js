@@ -127,6 +127,7 @@ function execWebdriver(){
         .deleteCookie()
         .url(AMAZON_URL)
         .setValue('input[name="email"]', strUserMail)
+        .click('input[id="continue"]')
         .setValue('input[name="password"]', strPassword)
         .click('input[id="signInSubmit"]')
         .waitForExist(AFTER_LOGIN_WAIT, PAUSE_TIME)

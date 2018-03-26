@@ -17,7 +17,9 @@ const DYNAMODB = new AWS.DynamoDB({region: 'ap-northeast-1'});
 const DOMParser = require('dom-parser');
 
 const AMAZON_URL = 'https://www.amazon.co.jp/gp/digital/fiona/manage/ref=nav_youraccount_myk';
-const AFTER_LOGIN_WAIT = '.contentApp_myx > div:nth-child(1) > div:nth-child(1)';
+//コンテンツと端末の管理 > 端末 tab
+//const AFTER_LOGIN_WAIT = '.contentApp_myx > div:nth-child(1) > div:nth-child(1)';
+const AFTER_LOGIN_WAIT = '.nav-tabs > li:nth-child(2) > div:nth-child(1)';
 const CONSOLE_MENU_OPEN = '.nav-tabs > li:nth-child(2) > div:nth-child(1) > div:nth-child(1) > a:nth-child(1)';
 const CONSOLE_DETAIL_WAIT = 'div.ng-isolate-scope:nth-child(4)';
 const FIRST_CONSOLE_EVENT = '.scroller-content > div:nth-child(1) > ul:nth-child(1) > li:nth-child(1)';
@@ -46,7 +48,7 @@ var strNameSecond = '兄';
  *
  */
 function init(){
-    if(process.env.USER_MAIL == '' || process.env.USER_MAIL == null){
+    if(process.env.USER_MAIL.trim() == '' || process.env.USER_MAIL == null){
         setIntValueFromDB();
     }else{
         console.log('use env:' + process.env.USER_MAIL);
@@ -69,48 +71,42 @@ function init(){
 */
 function setIntValueFromDB(){
     var params = {
-        TableName: 'users',
-        Key: {
-            'domain': {S :'amazon'}
+        'RequestItems': {
+            'users' :{
+            Keys: [
+                {'domain': {S :'amazon'}},
+                {'domain': {S :'line_access_token'}},
+                {'domain': {S :'line_min_group'}},
+            ]
+            }
         }
     };
 
-    DYNAMODB.getItem(params, function (err, res) {
-        strUserMail = res.Item.id.S;
-        strPassword = res.Item.password.S;
+    DYNAMODB.batchGetItem(params, function (err, res) {
+        if(err){
+            console.log('error: '+ err);
+        }
 
-        console.log('dynamoDB:' + strUserMail);
-
-        var params = {
-            TableName: 'users',
-            Key: {
-                'domain': {S :'line_access_token'}
+        var result = res.Responses.users.filter(function(item, index){
+            switch(item.domain.S){
+                case 'amazon' :
+                    strUserMail = item.id.S;
+                    strPassword = item.password.S;
+                case 'line_access_token' :
+                    strLineAccessToken = 'Bearer ' + item.id.S;
+                case 'line_min_group' :
+                    strLineMinGroupId = item.id.S;
             }
-        };
-
-        DYNAMODB.getItem(params, function (err, res) {
-            strLineAccessToken = 'Bearer ' + res.Item.id.S;
-
-            params = {
-                TableName: 'users',
-                Key: {
-                    'domain': {S :'line_min_group'}
-                }
-            };
-
-            DYNAMODB.getItem(params, function (err, res) {
-                strLineMinGroupId = res.Item.id.S;
-
-                //set env value
-                process.env.USER_MAIL = strUserMail;
-                process.env.PASSWORD = strPassword;
-                process.env.LINE_ACCESS_TOKEN = strLineAccessToken;
-                process.env.LINE_MIN_GROUP_ID = strLineMinGroupId;
-                console.log("env:" + process.env.LINE_MIN_GROUP_ID);
-
-                setDBfromUsageMinute(getNowDate(), execWebdriver);
-            });
         });
+
+        //set env value
+        process.env.USER_MAIL = strUserMail;
+        process.env.PASSWORD = strPassword;
+        process.env.LINE_ACCESS_TOKEN = strLineAccessToken;
+        process.env.LINE_MIN_GROUP_ID = strLineMinGroupId;
+        console.log("env:" + process.env.LINE_MIN_GROUP_ID);
+
+        setDBfromUsageMinute(getNowDate(), execWebdriver);
     });
 }
 
@@ -358,8 +354,14 @@ function setDBfromUsageMinute(pSearchDate, pCallBack){
                         break;
                 }
             }else{
+                //今日の日付のデータがなかったら、昨日の利用時間を調査する
+                //次回実行時にまだこの分岐に来ないよう、今日の時間を0分として登録する
                 console.log("no previous minute");
                 console.log("yesterday is:" + getYesterDate());
+
+                updateUsageTime(strNameFirst, 0);
+                updateUsageTime(strNameSecond, 0);
+
                 setDBfromUsageMinute(getYesterDate());
             }
 

@@ -92,10 +92,13 @@ function setIntValueFromDB(){
                 case 'amazon' :
                     strUserMail = item.id.S;
                     strPassword = item.password.S;
+                    break;
                 case 'line_access_token' :
                     strLineAccessToken = 'Bearer ' + item.id.S;
+                    break;
                 case 'line_min_group' :
                     strLineMinGroupId = item.id.S;
+                    break;
             }
         });
 
@@ -126,19 +129,23 @@ function execWebdriver(){
         .click('input[id="continue"]')
         .setValue('input[name="password"]', strPassword)
         .click('input[id="signInSubmit"]')
-        .waitForExist(AFTER_LOGIN_WAIT, PAUSE_TIME)
+        //.waitForExist(AFTER_LOGIN_WAIT, iPauseTime)
+        .pause(iPauseTime + 1500)
+        .getSource().then(source => {
+            console.log('after login:' + source);
+        })
         .click(CONSOLE_MENU_OPEN)
         .pause(iPauseTime + 1500)
         .click(APP_GAME_EVENT)
         .getSource().then(source => {
-            console.log('getSource' + strNameFirst);
+            console.log('getSource:' + strNameFirst);
             printUseTimes(strNameFirst, source);
         })
         .click(SECOND_CONSOLE_EVENT)
         .pause(iPauseTime)
         .click(APP_GAME_EVENT)
         .getSource().then(source => {
-            console.log('getSource' + strNameSecond);
+            console.log('getSource:' + strNameSecond);
             printUseTimes(strNameSecond, source);
         })
         .end().then(function(){
